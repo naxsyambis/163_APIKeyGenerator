@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Input Data User</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f3e5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .box {
+      width: 360px;
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; color: #6a1b9a; }
+    label { font-size: 12px; color: #666; display: block; margin-top: 10px; }
+    input {
+      width: 94%;
+      margin-top: 5px;
+      padding: 10px;
+      border: 2px solid #ce93d8;
+      border-radius: 10px;
+      outline: none;
+    }
+    input:focus { border-color: #ba68c8; }
+    input[readonly] { background-color: #f3e5f5; color: #888; }
+    
+    button {
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #ba68c8;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover { background: #9c27b0; }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h2>Lengkapi Data</h2>
+
+  <label>API Key Anda (Otomatis)</label>
+  <input type="text" id="apiKeyDisplay" readonly>
+
+  <label>Nama Depan</label>
+  <input type="text" id="firstname" placeholder="Contoh: Budi">
+
+  <label>Nama Belakang</label>
+  <input type="text" id="lastname" placeholder="Contoh: Santoso">
+
+  <label>Email Aktif</label>
+  <input type="email" id="email" placeholder="email@contoh.com">
+
+  <button onclick="saveUser()">Simpan Data</button>
+</div>
+
+<script>
+  // 1. Ambil data dari LocalStorage saat halaman dimuat
+  const storedKey = localStorage.getItem("lastApiKey");
+  const storedId = localStorage.getItem("lastApiKeyId");
+
+  // Tampilkan API Key di form (biar user yakin)
+  if (storedKey) {
+    document.getElementById("apiKeyDisplay").value = storedKey;
+  } else {
+    document.getElementById("apiKeyDisplay").value = "Error: Key tidak ditemukan!";
+    alert("Anda belum generate API Key. Silakan kembali ke halaman awal.");
+    window.location.href = "/"; // Balikin ke index kalau gak ada key
+  }
+
+  async function saveUser() {
+    const firstname = document.getElementById("firstname").value;
+    const lastname = document.getElementById("lastname").value;
+    const email = document.getElementById("email").value;
+
+    if (!firstname || !lastname || !email) {
+      alert("Harap isi semua formulir!");
+      return;
+    }
+
+    if (!storedId) {
+      alert("ID API Key hilang. Silakan generate ulang.");
+      return;
+    }
+
+    try {
+      // 2. Kirim data ke backend (sesuai struktur database baru)
+      const res = await fetch("/user/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstname: firstname,
+          lastname: lastname,
+          email: email,
+          apikey_id: storedId // Ini ID yang menghubungkan ke tabel api_keys
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert("Sukses! Data user berhasil disimpan.");
+        // Bersihkan localStorage jika sudah selesai (opsional)
+        localStorage.removeItem("lastApiKey");
+        localStorage.removeItem("lastApiKeyId");
+        window.location.href = "/"; // Atau redirect ke halaman sukses/login
+      } else {
+        alert("Gagal: " + data.message);
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan sistem.");
+    }
+  }
+</script>
+
+</body>
+</html>
