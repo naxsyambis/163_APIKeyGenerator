@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generate API Key & Register</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #ffe6f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      background: #fff0f6;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 20px;
+      box-shadow: 0 4px 15px rgba(255,0,128,0.15);
+      text-align: center;
+    }
+    h1, h3 { color: #ad1457; margin-bottom: 10px; }
+    
+    /* Style untuk Input dan Textarea */
+    textarea, input {
+      width: 90%;
+      border-radius: 10px;
+      padding: 12px;
+      border: 2px solid #ff80ab;
+      background: #fff;
+      margin-top: 10px;
+      font-family: inherit;
+      outline: none;
+    }
+    textarea {
+      height: 60px;
+      resize: none;
+      color: #880e4f;
+      font-weight: bold;
+      background-color: #ffeef4;
+    }
+    textarea:focus, input:focus {
+      border-color: #ba68c8;
+    }
+
+    /* Style Tombol */
+    button {
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      width: 100%;
+      margin-top: 15px;
+      transition: 0.3s;
+    }
+    .btn-generate {
+      background: #ff4081;
+      color: white;
+    }
+    .btn-generate:hover { background: #f50057; }
+
+    .btn-save {
+      background: #ba68c8;
+      color: white;
+    }
+    .btn-save:hover { background: #9c27b0; }
+
+    /* Helper classes */
+    .hidden { display: none; }
+    .divider {
+      margin: 25px 0;
+      border-top: 2px dashed #ff80ab;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div id="step1">
+      <h1>API Key System</h1>
+      <p style="font-size: 13px; color: #666;">Klik tombol di bawah untuk mendapatkan kunci akses Anda.</p>
+      
+      <button onclick="generateKey()" class="btn-generate" id="btnGen">Generate API Key</button>
+      <textarea id="apiKeyDisplay" readonly placeholder="API Key akan muncul di sini..."></textarea>
+    </div>
+
+    <div id="step2" class="hidden">
+      <div class="divider"></div>
+      <h3>Lengkapi Data Diri</h3>
+      <p style="font-size: 12px; color: #666;">Masukkan data untuk mengaktifkan Key di atas.</p>
+
+      <input type="text" id="firstname" placeholder="Nama Depan (First Name)">
+      <input type="text" id="lastname" placeholder="Nama Belakang (Last Name)">
+      <input type="email" id="email" placeholder="Email Aktif">
+
+      <button onclick="saveUser()" class="btn-save">Simpan Data User</button>
+    </div>
+  </div>
+
+<script>
+  // Variabel global untuk menyimpan ID sementara
+  let currentApiKeyId = null;
+
+  async function generateKey() {
+    const textarea = document.getElementById("apiKeyDisplay");
+    const btnGen = document.getElementById("btnGen");
+
+    try {
+      const res = await fetch("/api/generate-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        // 1. Tampilkan Key
+        textarea.value = result.data.apiKey;
+        
+        // 2. Simpan ID dari database ke variabel (untuk dipakai saat simpan user)
+        currentApiKeyId = result.data.id;
+
+        // 3. Tampilkan Form User (Hapus class hidden)
+        document.getElementById("step2").classList.remove("hidden");
+
+        // 4. Disable tombol generate agar tidak diklik lagi
+        btnGen.disabled = true;
+        btnGen.innerText = "API Key Generated ✅";
+        btnGen.style.background = "#ccc";
+        
+        // Opsional: Fokus ke input pertama
+        document.getElementById("firstname").focus();
+
+      } else {
+        alert("Gagal: " + result.message);
+      }
+
+    } catch (error) {
+      console.error(error);
+      alert("Gagal koneksi ke server.");
+    }
+  }
+
+  async function saveUser() {
+    const firstname = document.getElementById("firstname").value;
+    const lastname = document.getElementById("lastname").value;
+    const email = document.getElementById("email").value;
+
+    // Validasi sederhana
+    if (!firstname || !lastname || !email) {
+      alert("Mohon isi semua kolom data diri!");
+      return;
+    }
+
+    if (!currentApiKeyId) {
+      alert("Error: API Key ID tidak ditemukan. Silakan refresh halaman.");
+      return;
+    }
+
+    try {
+      // Kirim data ke backend
+      const res = await fetch("/user/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstname: firstname,
+          lastname: lastname,
+          email: email,
+          apikey_id: currentApiKeyId // ID yang kita dapat dari langkah pertama
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert("Berhasil! Data user dan API Key telah tersimpan.");
+        // Reset halaman untuk input baru
+        window.location.reload();
+      } else {
+        alert("Gagal menyimpan user: " + data.message);
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan sistem saat menyimpan user.");
+    }
+  }
+</script>
+
+</body>
+</html>
