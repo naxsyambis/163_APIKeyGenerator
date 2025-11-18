@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f3e5f5;
+      padding: 40px;
+      color: #333;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    h1 { color: #6a1b9a; margin: 0; }
+    
+    button.logout {
+      padding: 8px 16px;
+      background: #d32f2f;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      background: white;
+      border-collapse: collapse;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    th, td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    th {
+      background-color: #8e24aa;
+      color: white;
+      text-transform: uppercase;
+      font-size: 14px;
+    }
+    tr:hover { background-color: #f9f9f9; }
+
+    /* Status Badge Styles */
+    .badge {
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-size: 12px;
+      font-weight: bold;
+      color: white;
+    }
+    .on { background-color: #4caf50; } /* Hijau */
+    .off { background-color: #f44336; } /* Merah */
+
+    /* Tombol Action */
+    .btn-del {
+      background: #ffcdd2;
+      color: #c62828;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-del:hover { background: #ef9a9a; }
+
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <h1>Dashboard Admin</h1>
+      <p style="color: #666;">Kelola User & API Key</p>
+    </div>
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Nama User</th>
+        <th>Email</th>
+        <th>API Key</th>
+        <th>Tgl Buat</th>
+        <th>Status</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody id="dataBody">
+      <tr><td colspan="6" style="text-align:center;">Sedang memuat data...</td></tr>
+    </tbody>
+  </table>
+
+<script>
+  // 1. Cek Token saat halaman dimuat
+  const token = localStorage.getItem("adminToken");
+  if (!token) {
+    alert("Anda harus login terlebih dahulu!");
+    window.location.href = "/admin/login.html";
+  }
+
+  // Fungsi Load Data
+  async function loadData() {
+    try {
+      // PERBAIKAN ENDPOINT: /admin-panel/dashboard
+      const res = await fetch("/admin-panel/dashboard", {
+        method: "GET",
+        headers: {
+          "Authorization": "Bearer " + token // Kirim token di header
+        }
+      });
+
+      const result = await res.json();
+
+      // Jika token expired atau invalid
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+
+      const tbody = document.getElementById("dataBody");
+      tbody.innerHTML = ""; // Kosongkan tabel
+
+      // PERBAIKAN DATA: Loop result.data (bukan result saja)
+      if (result.success && result.data.length > 0) {
+        result.data.forEach(row => {
+          
+          // Warna badge status
+          const badgeClass = row.status.includes("OFF") ? "off" : "on";
+          
+          // Format tanggal agar cantik
+          const dateStr = new Date(row.created_at).toLocaleDateString("id-ID");
+
+          tbody.innerHTML += `
+            <tr>
+              <td><b>${row.firstname || '-'} ${row.lastname || '-'}</b></td>
+              <td>${row.email || '-'}</td>
+              <td style="font-family:monospace; color:#555;">${row.api_key}</td>
+              <td>${dateStr}</td>
+              <td><span class="badge ${badgeClass}">${row.status}</span></td>
+              <td>
+                <button class="btn-del" onclick="deleteData(${row.key_id})">Hapus</button>
+              </td>
+            </tr>
+          `;
+        });
+      } else {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Belum ada data user.</td></tr>`;
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Gagal mengambil data dari server.");
+    }
+  }
+
+  // Fungsi Hapus Data (CRUD: Delete)
+  async function deleteData(id) {
+    if (!confirm("Yakin ingin menghapus user & key ini?")) return;
+
+    try {
+      const res = await fetch(`/admin-panel/delete/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert("Data berhasil dihapus!");
+        loadData(); // Reload tabel otomatis
+      } else {
+        alert("Gagal menghapus: " + data.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error koneksi.");
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem("adminToken");
+    window.location.href = "/admin/login.html";
+  }
+
+  // Jalankan saat awal
+  loadData();
+</script>
+
+</body>
+</html>

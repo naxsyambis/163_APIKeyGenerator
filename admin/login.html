@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f3e5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .login-box {
+      background: white;
+      padding: 40px;
+      width: 320px;
+      border-radius: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h2 { color: #6a1b9a; margin-bottom: 20px; }
+    input {
+      width: 90%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 2px solid #e1bee7;
+      border-radius: 10px;
+      outline: none;
+      font-family: inherit;
+    }
+    input:focus { border-color: #ba68c8; }
+    
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .btn-login {
+      background: #8e24aa;
+      color: white;
+    }
+    .btn-login:hover { background: #7b1fa2; }
+    
+    .btn-register {
+      background: white;
+      color: #8e24aa;
+      border: 2px solid #8e24aa;
+    }
+    .btn-register:hover { background: #f3e5f5; }
+
+    .error-msg {
+      color: red;
+      font-size: 12px;
+      margin-top: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-box">
+    <h2>Admin Panel</h2>
+    
+    <input type="email" id="email" placeholder="Email Admin">
+    <input type="password" id="password" placeholder="Password">
+    
+    <p id="statusText" class="error-msg"></p>
+
+    <button onclick="loginAdmin()" class="btn-login">LOGIN</button>
+    
+    <button onclick="registerAdmin()" class="btn-register">DAFTAR ADMIN BARU</button>
+  </div>
+
+<script>
+  const statusText = document.getElementById("statusText");
+
+  // FUNGSI 1: LOGIN
+  async function loginAdmin() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    
+    statusText.style.display = "none";
+    if (!email || !password) return alert("Harap isi email dan password!");
+
+    try {
+      const res = await fetch("/admin-panel/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        localStorage.setItem("adminToken", data.token);
+        window.location.href = "/admin/dashboard.html"; // Masuk ke dashboard
+      } else {
+        showError(data.message || "Login Gagal (Cek Email/Password)");
+      }
+
+    } catch (err) {
+      console.error(err);
+      showError("Error koneksi ke server");
+    }
+  }
+
+  // FUNGSI 2: REGISTER (Klik ini dulu jika belum punya akun)
+  async function registerAdmin() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    statusText.style.display = "none";
+    if (!email || !password) return alert("Isi Email & Password yang ingin didaftarkan!");
+
+    try {
+      const res = await fetch("/admin-panel/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert("Berhasil Mendaftar! Silakan klik tombol Login sekarang.");
+      } else {
+        showError("Gagal Daftar: " + data.message);
+      }
+    } catch (err) {
+      console.error(err);
+      showError("Gagal koneksi saat mendaftar.");
+    }
+  }
+
+  function showError(msg) {
+    statusText.innerText = msg;
+    statusText.style.display = "block";
+    statusText.style.color = "red";
+  }
+</script>
+
+</body>
+</html>
